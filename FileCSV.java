@@ -1,5 +1,8 @@
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -12,10 +15,7 @@ public class FileCSV {
 	private String delimiter = ",";
 	private String[] headers;
 	
-	private boolean isValid = true;
-	
 	private List<Map<String,String>> file = new ArrayList<Map<String,String>>();
-	private Scanner scanner;
 	
 	public FileCSV(String path) {
 		this.path = path;
@@ -26,51 +26,36 @@ public class FileCSV {
 	}
 	
 	public void parseFile() {
-		readFile();
-		if (isValid) try {
-			readHeader();
-			while(scanner.hasNextLine()) readLineToMap();
-		}
-		finally {
-			scanner.close();		
-		}
-	}
-	
-	private void printMessage(String text) {
-		isValid = false;
-		System.out.println(text);
-	}
-	
-	private void readFile(){
-		try {
-			scanner = new Scanner(new File(path));
+		try (Scanner scanner = new Scanner(new File(path));) {
 			scanner.useDelimiter(delimiter);
-		} catch (FileNotFoundException e) {
-			printMessage("parseFile(" + path + ") - FileNotFoundException");
-		}
-	}
-	
-	private void readHeader(){
-		try {
-			headers = scanner.nextLine().split(delimiter);
+			headers = scanner.nextLine().split(delimiter);		
+			while(scanner.hasNextLine())
+				readLineToMap(scanner.nextLine().split(delimiter));
 		}
 		catch (NoSuchElementException e) {
-			printMessage("setHeader() - NoSuchElementException");
+			usingBufferedWritter("Can not read new line from file");
+		}
+		catch (FileNotFoundException e) {
+			usingBufferedWritter("Can not find a file");
+		}
+
+	}
+	
+	public static void usingBufferedWritter(String fileContent)
+	{   
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter("D:/log.txt"))) {
+		    writer.write(fileContent);
+	    }
+		catch (IOException e) {
+			System.out.print("Can not write to log");
 		}
 	}
 	
-	private void readLineToMap(){
+	private void readLineToMap(String[] line){
 		Map<String,String> map = new HashMap<String,String>();
-		String[] line;
-		try {
-			line = scanner.nextLine().split(delimiter);	
-			for(int i = 0; i < line.length; i++)
-				map.put(headers[i], line[i]);
-			file.add(map);
-		}
-		catch (NoSuchElementException e) {
-			printMessage("readLineToMap() - NoSuchElementException");
-		}
+		for(int i = 0; i < line.length; i++)
+			map.put(headers[i], line[i]);
+		file.add(map);
 	}
 	
 	public void addLineToMap(String header, String value) {
@@ -80,7 +65,7 @@ public class FileCSV {
 				file.get(i).put(header, value);
 		}
 		catch (NullPointerException e) {
-			printMessage("addLineToMap() - NullPointerException");
+			usingBufferedWritter("Can not add new column");
 		}
 	}
 	
